@@ -4,6 +4,7 @@ version: "3"
 
 vars:
   GREETING: Hello, world!
+  NAMESPACE: siphon
 
 dotenv:
   - .env
@@ -116,3 +117,18 @@ tasks:
     desc: Run k6 rate limit test via Docker
     cmds:
       - docker run --rm -i --network host -v "$(pwd)/loadtest:/loadtest" -e BASE_URL=http://localhost:5000 grafana/k6 run /loadtest/ratelimit.js
+
+  helm:deploy:
+    desc: Deploy Siphon to Kubernetes in the siphon namespace
+    cmds:
+      - helm upgrade --install siphon ./helm/siphon -f values.yaml --namespace {{.NAMESPACE}} --create-namespace
+
+  helm:status:
+    desc: Check status of Siphon components in the siphon namespace
+    cmds:
+      - kubectl get pods,svc,jobs -n {{.NAMESPACE}}
+
+  helm:uninstall:
+    desc: Uninstall Siphon release from Kubernetes
+    cmds:
+      - helm uninstall siphon --namespace {{.NAMESPACE}}
