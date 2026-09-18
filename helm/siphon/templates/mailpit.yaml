@@ -1,0 +1,48 @@
+{{- if .Values.mailpit.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "siphon.fullname" . }}-mailpit
+  labels:
+    {{- include "siphon.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mailpit
+spec:
+  selector:
+    {{- include "siphon.selectorLabels" (dict "root" . "component" "mailpit") | nindent 4 }}
+  ports:
+    - name: smtp
+      port: 1025
+      targetPort: 1025
+    - name: http
+      port: 8025
+      targetPort: 8025
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "siphon.fullname" . }}-mailpit
+  labels:
+    {{- include "siphon.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mailpit
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "siphon.selectorLabels" (dict "root" . "component" "mailpit") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "siphon.selectorLabels" (dict "root" . "component" "mailpit") | nindent 8 }}
+    spec:
+      containers:
+        - name: mailpit
+          image: {{ .Values.mailpit.image | default "axllent/mailpit:latest" }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: smtp
+              containerPort: 1025
+            - name: http
+              containerPort: 8025
+          resources:
+            {{- toYaml .Values.mailpit.resources | nindent 12 }}
+{{- end }}

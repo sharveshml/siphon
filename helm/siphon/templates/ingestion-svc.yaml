@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "siphon.fullname" . }}-ingestion-svc
+  labels:
+    {{- include "siphon.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ingestion-svc
+spec:
+  selector:
+    {{- include "siphon.selectorLabels" (dict "root" . "component" "ingestion-svc") | nindent 4 }}
+  ports:
+    - port: {{ .Values.ingestionSvc.port }}
+      targetPort: {{ .Values.ingestionSvc.port }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "siphon.fullname" . }}-ingestion-svc
+  labels:
+    {{- include "siphon.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ingestion-svc
+spec:
+  replicas: {{ .Values.ingestionSvc.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "siphon.selectorLabels" (dict "root" . "component" "ingestion-svc") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "siphon.selectorLabels" (dict "root" . "component" "ingestion-svc") | nindent 8 }}
+    spec:
+      containers:
+        - name: ingestion-svc
+          image: {{ .Values.ingestionSvc.image.repository | default (printf "%s/siphon-ingestion-svc" .Values.image.registry | trimPrefix "/") }}:{{ .Values.ingestionSvc.image.tag | default .Values.image.tag | default .Chart.AppVersion }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.ingestionSvc.port }}
+          env:
+            - name: PORT
+              value: {{ .Values.ingestionSvc.port | quote }}
+            - name: KAFKA_BROKER
+              value: {{ ternary (printf "%s-kafka:9092" (include "siphon.fullname" .)) .Values.external.kafkaBroker .Values.kafka.enabled | quote }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "siphon.fullname" . }}
+                  key: database-url
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.ingestionSvc.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.ingestionSvc.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.ingestionSvc.resources | nindent 12 }}

@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "siphon.fullname" . }}-email-svc
+  labels:
+    {{- include "siphon.labels" . | nindent 4 }}
+    app.kubernetes.io/component: email-svc
+spec:
+  replicas: {{ .Values.emailSvc.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "siphon.selectorLabels" (dict "root" . "component" "email-svc") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "siphon.selectorLabels" (dict "root" . "component" "email-svc") | nindent 8 }}
+    spec:
+      containers:
+        - name: email-svc
+          image: {{ .Values.emailSvc.image.repository | default (printf "%s/siphon-email-svc" .Values.image.registry | trimPrefix "/") }}:{{ .Values.emailSvc.image.tag | default .Values.image.tag | default .Chart.AppVersion }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: EMAIL_PROVIDER
+              value: {{ .Values.emailSvc.provider | default "smtp" | quote }}
+            - name: SMTP_HOST
+              value: {{ .Values.emailSvc.smtpHost | default (printf "%s-mailpit" (include "siphon.fullname" .)) | quote }}
+            - name: SMTP_PORT
+              value: {{ .Values.emailSvc.smtpPort | default "1025" | quote }}
+            - name: KAFKA_URL
+              value: {{ ternary (printf "%s-kafka:9092" (include "siphon.fullname" .)) .Values.external.kafkaBroker .Values.kafka.enabled | quote }}
+            - name: RESEND_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "siphon.fullname" . }}
+                  key: resend-api-key
+            - name: FROM_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "siphon.fullname" . }}
+                  key: from-email
+          resources:
+            {{- toYaml .Values.emailSvc.resources | nindent 12 }}

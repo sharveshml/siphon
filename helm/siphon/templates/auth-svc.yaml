@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "siphon.fullname" . }}-auth-svc
+  labels:
+    {{- include "siphon.labels" . | nindent 4 }}
+    app.kubernetes.io/component: auth-svc
+spec:
+  selector:
+    {{- include "siphon.selectorLabels" (dict "root" . "component" "auth-svc") | nindent 4 }}
+  ports:
+    - port: {{ .Values.authSvc.port }}
+      targetPort: {{ .Values.authSvc.port }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "siphon.fullname" . }}-auth-svc
+  labels:
+    {{- include "siphon.labels" . | nindent 4 }}
+    app.kubernetes.io/component: auth-svc
+spec:
+  replicas: {{ .Values.authSvc.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "siphon.selectorLabels" (dict "root" . "component" "auth-svc") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "siphon.selectorLabels" (dict "root" . "component" "auth-svc") | nindent 8 }}
+    spec:
+      containers:
+        - name: auth-svc
+          image: {{ .Values.authSvc.image.repository | default (printf "%s/siphon-auth-svc" .Values.image.registry | trimPrefix "/") }}:{{ .Values.authSvc.image.tag | default .Values.image.tag | default .Chart.AppVersion }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.authSvc.port }}
+          env:
+            - name: PORT
+              value: {{ .Values.authSvc.port | quote }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "siphon.fullname" . }}
+                  key: database-url
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "siphon.fullname" . }}
+                  key: jwt-secret
+          readinessProbe:
+            tcpSocket:
+              port: {{ .Values.authSvc.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.authSvc.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.authSvc.resources | nindent 12 }}

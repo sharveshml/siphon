@@ -1,0 +1,6 @@
+apiVersion: v2
+name: siphon
+description: Helm chart for the Siphon platform (API gateway, auth, ingestion, and email services with Redis and Kafka)
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

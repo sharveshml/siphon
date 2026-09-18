@@ -1,0 +1,22 @@
+Siphon has been deployed to namespace: {{ .Release.Namespace }}
+
+1. API Gateway:
+{{- if .Values.apiGateway.ingress.enabled }}
+  Reachable via ingress at: http{{ if .Values.apiGateway.ingress.tls }}s{{ end }}://{{ .Values.apiGateway.ingress.host }}
+{{- else }}
+  Forward traffic locally with:
+    kubectl port-forward svc/{{ include "siphon.fullname" . }}-api-gateway {{ .Values.apiGateway.port }}:{{ .Values.apiGateway.port }} -n {{ .Release.Namespace }}
+{{- end }}
+
+{{- if .Values.mailpit.enabled }}
+
+2. Mailpit Inbox (Web UI to inspect emails):
+  Forward Mailpit UI to your browser with:
+    kubectl port-forward svc/{{ include "siphon.fullname" . }}-mailpit 8025:8025 -n {{ .Release.Namespace }}
+  Then open in your browser:
+    http://localhost:8025
+{{- end }}
+
+3. Jobs Status:
+  Check migration/topic-init job status with:
+    kubectl get jobs -n {{ .Release.Namespace }} -l app.kubernetes.io/instance={{ .Release.Name }}

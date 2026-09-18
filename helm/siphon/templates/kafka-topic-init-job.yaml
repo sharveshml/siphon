@@ -1,0 +1,33 @@
+{{- if .Values.kafka.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "siphon.fullname" . }}-kafka-topic-init
+  labels:
+    {{- include "siphon.labels" . | nindent 4 }}
+    app.kubernetes.io/component: kafka-topic-init
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded,hook-failed
+spec:
+  backoffLimit: 10
+  template:
+    metadata:
+      labels:
+        {{- include "siphon.selectorLabels" (dict "root" . "component" "kafka-topic-init") | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: kafka-topic-init
+          image: {{ .Values.kafka.image }}
+          command: ["/bin/bash", "-c"]
+          args:
+            - >-
+              /opt/kafka/bin/kafka-topics.sh
+              --bootstrap-server {{ include "siphon.fullname" . }}-kafka:9092
+              --create --if-not-exists
+              --topic {{ .Values.kafka.topic }}
+              --partitions {{ .Values.kafka.partitions }}
+              --replication-factor {{ .Values.kafka.replicationFactor }}
+{{- end }}

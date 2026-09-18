@@ -1,0 +1,96 @@
+# Default values for the siphon chart.
+
+nameOverride: ""
+fullnameOverride: ""
+
+image:
+  # Base registry for the microservice images
+  # Generates: ghcr.io/kaizakin/siphon-<service>:latest
+  registry: "ghcr.io/kaizakin"
+  tag: latest
+  pullPolicy: IfNotPresent
+
+secrets:
+  # JWT signing secret used by auth-svc and api-gateway
+  jwtSecret: change-me
+  # Resend API key (if using provider: resend)
+  resendApiKey: ""
+  # Default From email address
+  fromEmail: "test@siphon.local"
+  # External PostgreSQL connection string (required)
+  databaseUrl: "postgres://siphon:siphon@localhost:5432/siphon?sslmode=disable"
+
+# External endpoints for Redis / Kafka (only needed if in-cluster redis/kafka is disabled)
+external:
+  redisAddr: ""
+  kafkaBroker: ""
+
+# In-cluster Redis deployment
+redis:
+  enabled: true
+  image: redis:7-alpine
+  resources: {}
+
+# In-cluster Kafka deployment (KRaft mode)
+kafka:
+  enabled: true
+  image: apache/kafka:4.1.1
+  topic: events
+  partitions: 1
+  replicationFactor: 1
+  storage: 5Gi
+  storageClassName: ""
+  resources: {}
+
+# In-cluster Mailpit deployment (for local testing & catching emails)
+mailpit:
+  enabled: true
+  image: axllent/mailpit:latest
+  resources: {}
+
+# Database migration job (runs goose up against external databaseUrl on helm install/upgrade)
+migrate:
+  image:
+    repository: ""
+    tag: ""
+
+# Microservices
+authSvc:
+  replicaCount: 1
+  port: 5002
+  image:
+    repository: ""
+    tag: ""
+  resources: {}
+
+ingestionSvc:
+  replicaCount: 1
+  port: 5003
+  image:
+    repository: ""
+    tag: ""
+  resources: {}
+
+apiGateway:
+  replicaCount: 1
+  port: 5000
+  image:
+    repository: ""
+    tag: ""
+  resources: {}
+  ingress:
+    enabled: false
+    className: ""
+    host: ""
+    annotations: {}
+    tls: []
+
+emailSvc:
+  replicaCount: 1
+  provider: smtp # "smtp" or "resend"
+  smtpHost: ""   # defaults to <release>-mailpit if left blank
+  smtpPort: "1025"
+  image:
+    repository: ""
+    tag: ""
+  resources: {}
